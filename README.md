@@ -1,3 +1,12 @@
+# 一箭又一箭（OneArrowAgain）
+
+一款基于 Python + Pygame 开发的方向箭头解谜游戏。
+
+**作者：罗宇泽**  
+**开发时间：2026 年**  
+**Copyright © 2026 Luo Yuze. All Rights Reserved.**
+
+
 ## 版权声明
 
 Copyright © 2026 yz-Yezi-Genm/Luo Yuze. All Rights Reserved.
