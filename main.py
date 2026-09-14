@@ -1,7 +1,41 @@
+# ============================================================
+# Project: OneArrowAgain（一箭又一箭）
+# Author: yz-Yezi-Genm/Luo Yuze
+# Copyright (c) 2026 yz-Yezi-Genm/Luo Yuze
+# All Rights Reserved.
+#
+# 本项目由yz-Yezi-Genm/罗宇泽开发完成。
+# 未经许可，不得擅自复制、修改、传播或用于商业用途。
+# ============================================================
+
 import pygame
 import sys
 import random
 import math
+
+import pygame
+import sys
+import random
+import math
+
+import os
+
+def resource_path(relative_path):
+
+    # PyInstaller 打包后的临时目录
+    if hasattr(sys, "_MEIPASS"):
+
+        base_path = sys._MEIPASS
+
+    else:
+
+        # 普通 Python 运行
+        base_path = os.path.abspath(".")
+
+    return os.path.join(
+        base_path,
+        relative_path
+    )
 
 # =====================
 # pygame 初始化
@@ -108,11 +142,15 @@ pygame.display.set_caption(
 HEART_HEIGHT = 22
 
 heart_full_image = pygame.image.load(
-    "assets/heart_full.png"
+    resource_path(
+        "assets/heart_full.png"
+    )
 ).convert_alpha()
 
 heart_empty_image = pygame.image.load(
-    "assets/heart_empty.png"
+    resource_path(
+        "assets/heart_empty.png"
+    )
 ).convert_alpha()
 
 heart_ratio = (
@@ -139,7 +177,9 @@ heart_empty_image = pygame.transform.scale(
 # =====================
 
 error_sound = pygame.mixer.Sound(
-    "assets/error.mp3"
+    resource_path(
+        "assets/error.mp3"
+    )
 )
 
 # 设置音量
@@ -152,7 +192,9 @@ error_sound.set_volume(0.5)
 # =====================
 
 start_background = pygame.image.load(
-    "assets/start_background.png"
+    resource_path(
+        "assets/start_background.png"
+    )
 ).convert()
 
 # 将图片缩放到游戏窗口大小
@@ -166,7 +208,9 @@ start_background = pygame.transform.smoothscale(
 # =====================
 
 start_button_image = pygame.image.load(
-    "assets/start_button2.png"
+    resource_path(
+        "assets/start_button2.png"
+    )
 ).convert_alpha()
 
 # 自动找到真正有内容的区域
@@ -268,6 +312,13 @@ BOARD_Y = (HEIGHT - BOARD_HEIGHT) // 2
 # =====================
 # 游戏控制按钮
 # =====================
+
+undo_button = pygame.Rect(
+    850,
+    230,
+    190,
+    58
+)
 
 restart_button = pygame.Rect(
     850,
@@ -1074,6 +1125,57 @@ def is_flying_arrow_outside(arrow, offset):
 
     return False
 
+def save_history():
+
+    history.append(
+        {
+            "arrows": [
+                arrow.copy()
+                for arrow in arrows
+            ],
+
+            "mistakes_left": mistakes_left
+        }
+    )
+
+def undo_last_move():
+
+    global arrows
+    global mistakes_left
+    global flying_arrow
+    global fly_offset
+    global blocked_arrow
+    global blocked_until
+
+    # 没有历史记录
+    if not history:
+
+        print("没有可以撤销的操作")
+
+        return
+
+
+    # 取出最后一次操作之前的状态
+    previous_state = history.pop()
+
+    arrows = [
+        arrow.copy()
+        for arrow in previous_state["arrows"]
+    ]
+
+    mistakes_left = previous_state[
+        "mistakes_left"
+    ]
+
+    # 清除动画状态
+    flying_arrow = None
+    fly_offset = 0
+
+    blocked_arrow = None
+    blocked_until = 0
+
+    print("已撤销上一步")
+
 # =====================
 # 判断箭头前方是否被阻挡
 # =====================
@@ -1217,11 +1319,12 @@ def generate_random_levels():
 
     return [
         generate_solvable_level(10),
-        generate_solvable_level(1),
-        generate_solvable_level(1)
+        generate_solvable_level(15),
+        generate_solvable_level(20)
     ]
 
 def start_game():
+    global history
 
     global current_level
     global arrows
@@ -1231,6 +1334,8 @@ def start_game():
 
     global level_start_time
     global elapsed_time
+
+    history.clear()
 
     # 每次新游戏重新随机生成关卡
     LEVELS = generate_random_levels()
@@ -1252,6 +1357,8 @@ def start_game():
 
 def restart_game():
 
+    global history
+
     global arrows
     global mistakes_left
     global game_state
@@ -1263,6 +1370,8 @@ def restart_game():
 
     global level_start_time
     global elapsed_time
+
+    history.clear()
 
     arrows = [
         arrow.copy()
@@ -1297,6 +1406,9 @@ def go_home():
     global level_start_time
     global elapsed_time
 
+    global history
+    history.clear()
+
     current_level = 0
 
     level_start_time = 0
@@ -1318,6 +1430,7 @@ def go_home():
     game_state = "START"
 
 def next_level():
+    global history
 
     global current_level
     global arrows
@@ -1326,6 +1439,8 @@ def next_level():
 
     global level_start_time
     global elapsed_time
+
+    history.clear()
 
     if current_level < len(LEVELS) - 1:
 
@@ -1384,6 +1499,12 @@ mistakes_left = MAX_MISTAKES
 
 # 程序启动后首先进入开始界面
 game_state = "START"
+
+# =====================
+# 撤销历史
+# =====================
+
+history = []
 
 # =====================
 # 计时器
@@ -1445,24 +1566,30 @@ while running:
 
                 if game_state == "PLAYING":
 
-                    # =====================
-                    # 重新开始
-                    # =====================
+                    # 撤销
+                    if undo_button.collidepoint(
+                            mouse_x,
+                            mouse_y
+                    ):
 
+                        if (
+                                flying_arrow is None
+                                and blocked_arrow is None
+                        ):
+                            undo_last_move()
+
+                        continue
+
+                    # 重新开始
                     if restart_button.collidepoint(
                             mouse_x,
                             mouse_y
                     ):
                         restart_game()
 
-                        print("重新开始当前关卡")
-
                         continue
 
-                    # =====================
                     # 返回首页
-                    # =====================
-
                     if home_button.collidepoint(
                             mouse_x,
                             mouse_y
@@ -1558,6 +1685,9 @@ while running:
                                 "点击到了箭头：",
                                 arrow["direction"]
                             )
+
+                            # 执行本次操作前保存游戏状态
+                            save_history()
 
                             # 判断箭头是否被阻挡
                             if is_blocked(arrow, arrows):
@@ -2278,6 +2408,13 @@ while running:
         # =====================
 
         if game_state == "PLAYING":
+            draw_game_button(
+                screen,
+                undo_button,
+                "撤销上一步",
+                primary=False
+            )
+
             draw_game_button(
                 screen,
                 restart_button,
