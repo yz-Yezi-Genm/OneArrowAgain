@@ -1,7 +1,7 @@
 import pygame
 import sys
 import random
-
+import math
 
 # =====================
 # pygame 初始化
@@ -99,6 +99,39 @@ screen = pygame.display.set_mode(
 
 pygame.display.set_caption(
     "一箭又一箭"
+)
+
+# =====================
+# 加载生命值图片
+# =====================
+
+HEART_HEIGHT = 22
+
+heart_full_image = pygame.image.load(
+    "assets/heart_full.png"
+).convert_alpha()
+
+heart_empty_image = pygame.image.load(
+    "assets/heart_empty.png"
+).convert_alpha()
+
+heart_ratio = (
+    heart_full_image.get_width()
+    / heart_full_image.get_height()
+)
+
+HEART_WIDTH = int(
+    HEART_HEIGHT * heart_ratio
+)
+
+heart_full_image = pygame.transform.scale(
+    heart_full_image,
+    (HEART_WIDTH, HEART_HEIGHT)
+)
+
+heart_empty_image = pygame.transform.scale(
+    heart_empty_image,
+    (HEART_WIDTH, HEART_HEIGHT)
 )
 
 # =====================
@@ -267,21 +300,21 @@ hint_bar = pygame.Rect(
 
 result_panel = pygame.Rect(
     WIDTH // 2 - 260,
-    HEIGHT // 2 - 180,
+    HEIGHT // 2 - 200,
     520,
-    360
+    400
 )
 
 result_primary_button = pygame.Rect(
     WIDTH // 2 - 195,
-    HEIGHT // 2 + 95,
+    HEIGHT // 2 + 120,
     180,
     55
 )
 
 result_home_button = pygame.Rect(
     WIDTH // 2 + 15,
-    HEIGHT // 2 + 95,
+    HEIGHT // 2 + 120,
     180,
     55
 )
@@ -562,6 +595,56 @@ def draw_hint_bar():
         hint_text_rect
     )
 
+# =====================
+# 绘制五角星
+# =====================
+
+def draw_star(
+        surface,
+        color,
+        center,
+        outer_radius,
+        inner_radius
+):
+
+    points = []
+
+    # 五角星一共有10个顶点
+    # 5个外顶点 + 5个内顶点
+    for i in range(10):
+
+        angle = math.radians(
+            -90 + i * 36
+        )
+
+        # 偶数点使用外半径
+        if i % 2 == 0:
+            radius = outer_radius
+
+        # 奇数点使用内半径
+        else:
+            radius = inner_radius
+
+        x = (
+            center[0]
+            + math.cos(angle) * radius
+        )
+
+        y = (
+            center[1]
+            + math.sin(angle) * radius
+        )
+
+        points.append(
+            (x, y)
+        )
+
+    pygame.draw.polygon(
+        surface,
+        color,
+        points
+    )
+
 def draw_result_panel(state):
 
     # =====================
@@ -648,6 +731,18 @@ def draw_result_panel(state):
 
         button_text = "再玩一次"
 
+    # =====================
+    # 计算本关星级
+    # =====================
+
+    mistakes_used = (
+            MAX_MISTAKES - mistakes_left
+    )
+
+    star_count = max(
+        0,
+        3 - mistakes_used
+    )
 
     # =====================
     # 顶部圆形图标
@@ -741,11 +836,12 @@ def draw_result_panel(state):
 
         # 完成状态暂时画一个圆点/小太阳，
         # 后面也可以单独设计星形
-        pygame.draw.circle(
+        draw_star(
             screen,
             WHITE,
             icon_center,
-            13
+            20,
+            9
         )
 
 
@@ -794,6 +890,73 @@ def draw_result_panel(state):
         subtitle_rect
     )
 
+    # =====================
+    # 本关星级
+    # =====================
+
+    STAR_GOLD = (240, 180, 65)
+    STAR_EMPTY = (215, 215, 205)
+
+    star_y = result_panel.y + 235
+
+    star_spacing = 55
+
+    first_star_x = (
+            WIDTH // 2 - star_spacing
+    )
+
+    for i in range(3):
+
+        star_center = (
+            first_star_x + i * star_spacing,
+            star_y
+        )
+
+        # 已获得的星星
+        if i < star_count:
+
+            star_color = STAR_GOLD
+
+        # 没获得的星星
+        else:
+
+            star_color = STAR_EMPTY
+
+        draw_star(
+            screen,
+            star_color,
+            star_center,
+            19,
+            8
+        )
+
+    # =====================
+    # 本关用时
+    # =====================
+
+    minutes = elapsed_time // 60
+    seconds = elapsed_time % 60
+    mistakes_used = (
+            MAX_MISTAKES - mistakes_left
+    )
+
+    result_info_text = small_font.render(
+        f"失误 {mistakes_used} 次    用时 {minutes:02d}:{seconds:02d}",
+        True,
+        RESULT_SUB_TEXT
+    )
+
+    result_info_rect = result_info_text.get_rect(
+        center=(
+            WIDTH // 2,
+            result_panel.y + 275
+        )
+    )
+
+    screen.blit(
+        result_info_text,
+        result_info_rect
+    )
 
     # =====================
     # 主操作按钮
@@ -1054,8 +1217,8 @@ def generate_random_levels():
 
     return [
         generate_solvable_level(10),
-        generate_solvable_level(15),
-        generate_solvable_level(20)
+        generate_solvable_level(1),
+        generate_solvable_level(1)
     ]
 
 def start_game():
@@ -1065,6 +1228,9 @@ def start_game():
     global mistakes_left
     global game_state
     global LEVELS
+
+    global level_start_time
+    global elapsed_time
 
     # 每次新游戏重新随机生成关卡
     LEVELS = generate_random_levels()
@@ -1077,6 +1243,10 @@ def start_game():
     ]
 
     mistakes_left = MAX_MISTAKES
+
+    # 开始计时
+    level_start_time = pygame.time.get_ticks()
+    elapsed_time = 0
 
     game_state = "PLAYING"
 
@@ -1091,12 +1261,19 @@ def restart_game():
     global blocked_arrow
     global blocked_until
 
+    global level_start_time
+    global elapsed_time
+
     arrows = [
         arrow.copy()
         for arrow in LEVELS[current_level]
     ]
 
     mistakes_left = MAX_MISTAKES
+
+    # 重新计时
+    level_start_time = pygame.time.get_ticks()
+    elapsed_time = 0
 
     flying_arrow = None
     fly_offset = 0
@@ -1117,8 +1294,13 @@ def go_home():
     global fly_offset
     global blocked_arrow
     global blocked_until
+    global level_start_time
+    global elapsed_time
 
     current_level = 0
+
+    level_start_time = 0
+    elapsed_time = 0
 
     arrows = [
         arrow.copy()
@@ -1142,7 +1324,9 @@ def next_level():
     global mistakes_left
     global game_state
 
-    # 如果还有下一关
+    global level_start_time
+    global elapsed_time
+
     if current_level < len(LEVELS) - 1:
 
         current_level += 1
@@ -1154,6 +1338,10 @@ def next_level():
 
         mistakes_left = MAX_MISTAKES
 
+        # 下一关重新计时
+        level_start_time = pygame.time.get_ticks()
+        elapsed_time = 0
+
         game_state = "PLAYING"
 
         print(
@@ -1164,10 +1352,7 @@ def next_level():
 
     else:
 
-        # 所有关卡完成
         game_state = "COMPLETE"
-
-        print("恭喜！全部关卡通过！")
 
 # =====================
 # 关卡数据
@@ -1199,6 +1384,16 @@ mistakes_left = MAX_MISTAKES
 
 # 程序启动后首先进入开始界面
 game_state = "START"
+
+# =====================
+# 计时器
+# =====================
+
+# 当前关卡开始的时间
+level_start_time = 0
+
+# 当前关卡已经经过的秒数
+elapsed_time = 0
 
 # =====================
 # 动画状态
@@ -1249,6 +1444,24 @@ while running:
                 # =====================
 
                 if game_state == "PLAYING":
+
+                    # =====================
+                    # 重新开始
+                    # =====================
+
+                    if restart_button.collidepoint(
+                            mouse_x,
+                            mouse_y
+                    ):
+                        restart_game()
+
+                        print("重新开始当前关卡")
+
+                        continue
+
+                    # =====================
+                    # 返回首页
+                    # =====================
 
                     if home_button.collidepoint(
                             mouse_x,
@@ -1388,6 +1601,16 @@ while running:
     # =====================
     # 绘制游戏画面
     # =====================
+
+    # =====================
+    # 更新计时器
+    # =====================
+
+    if game_state == "PLAYING":
+        elapsed_time = (
+                               pygame.time.get_ticks()
+                               - level_start_time
+                       ) // 1000
 
     # =====================
     # 更新动画
@@ -1572,13 +1795,19 @@ while running:
         # =====================
 
         CARD_Y = 62
-        CARD_WIDTH = 190
+        CARD_WIDTH = 175
         CARD_HEIGHT = 52
-        CARD_GAP = 20
+        CARD_GAP = 16
 
-        # 三张卡整体居中
-        total_width = CARD_WIDTH * 3 + CARD_GAP * 2
-        start_x = (WIDTH - total_width) // 2
+        HEART_HEIGHT = 20
+        HEART_GAP = 4
+
+        # 四张卡片整体居中
+        total_width = CARD_WIDTH * 4 + CARD_GAP * 3
+
+        start_x = (
+                          WIDTH - total_width
+                  ) // 2
 
         level_card = pygame.Rect(
             start_x,
@@ -1601,12 +1830,21 @@ while running:
             CARD_HEIGHT
         )
 
-        # 绘制三张卡片
+        time_card = pygame.Rect(
+            start_x + (CARD_WIDTH + CARD_GAP) * 3,
+            CARD_Y,
+            CARD_WIDTH,
+            CARD_HEIGHT
+        )
+
+        # 绘制四张状态卡片
         for card in (
                 level_card,
                 arrow_card,
-                mistake_card
+                mistake_card,
+                time_card
         ):
+
             pygame.draw.rect(
                 screen,
                 CARD_COLOR,
@@ -1684,6 +1922,43 @@ while running:
             SUB_TEXT_COLOR
         )
 
+        # =====================
+        # 用时
+        # =====================
+
+        time_label = small_font.render(
+            "用时",
+            True,
+            SUB_TEXT_COLOR
+        )
+
+        # 秒转换成 分:秒
+        minutes = elapsed_time // 60
+        seconds = elapsed_time % 60
+
+        time_value = font.render(
+            f"{minutes:02d}:{seconds:02d}",
+            True,
+            DARK_GREEN
+        )
+
+        screen.blit(
+            time_label,
+            (
+                time_card.x + 16,
+                time_card.y + 7
+            )
+        )
+
+        screen.blit(
+            time_value,
+            (
+                time_card.x + 75,
+                time_card.y + 12
+            )
+        )
+
+
         screen.blit(
             mistake_label,
             (
@@ -1692,21 +1967,50 @@ while running:
             )
         )
 
+        # =====================
+        # 剩余生命值
+        # =====================
+
+        HEART_GAP = 4
+
+        # 三颗爱心总共占多宽
+        hearts_total_width = (
+                HEART_HEIGHT * MAX_MISTAKES
+                + HEART_GAP * (MAX_MISTAKES - 1)
+        )
+
+        # 从卡片右侧往左排列
+        heart_start_x = (
+                mistake_card.right
+                - 10
+                - hearts_total_width
+        )
+
+        heart_y = (
+                mistake_card.centery
+                - HEART_HEIGHT // 2
+        )
+
         for i in range(MAX_MISTAKES):
 
-            circle_x = mistake_card.x + 115 + i * 22
-            circle_y = mistake_card.centery
+            heart_x = (
+                    heart_start_x
+                    + i * (HEART_HEIGHT + HEART_GAP)
+            )
 
+            # 还有生命
             if i < mistakes_left:
-                circle_color = DANGER_COLOR
-            else:
-                circle_color = (225, 225, 215)
 
-            pygame.draw.circle(
-                screen,
-                circle_color,
-                (circle_x, circle_y),
-                7
+                heart_image = heart_full_image
+
+            # 已失去生命
+            else:
+
+                heart_image = heart_empty_image
+
+            screen.blit(
+                heart_image,
+                (heart_x, heart_y)
             )
 
         board_panel = pygame.Rect(
