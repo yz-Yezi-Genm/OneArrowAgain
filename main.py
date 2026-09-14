@@ -24,6 +24,10 @@ pygame.display.set_caption(
     "一箭又一箭"
 )
 
+font = pygame.font.SysFont(
+    "Microsoft YaHei",
+    26
+)
 
 # =====================
 # 棋盘参数
@@ -199,6 +203,12 @@ arrows = [
     {"row": 2, "col": 2, "direction": "LEFT"}
 ]
 
+# =====================
+# 游戏状态
+# =====================
+
+MAX_MISTAKES = 3
+mistakes_left = MAX_MISTAKES
 
 # =====================
 # 游戏循环
@@ -258,9 +268,22 @@ while running:
 
                                 print("前方有箭头，被阻挡！")
 
+                                # 扣除一次失误机会
+                                mistakes_left -= 1
+
+                                if mistakes_left <= 0:
+                                    print("游戏失败！")
+
+                                print("剩余失误次数：", mistakes_left)
+
                             else:
 
                                 print("前方没有箭头，可以飞出！")
+
+                                # 从箭头列表中删除
+                                arrows.remove(arrow)
+
+                                print("剩余箭头数量：", len(arrows))
 
                             break
 
@@ -274,6 +297,42 @@ while running:
         (245, 245, 245)
     )
 
+    # =====================
+    # 显示游戏信息
+    # =====================
+
+    level_text = font.render(
+        "当前关卡：1",
+        True,
+        (30, 30, 30)
+    )
+
+    arrow_text = font.render(
+        f"剩余箭头：{len(arrows)}",
+        True,
+        (30, 30, 30)
+    )
+
+    mistake_text = font.render(
+        f"剩余失误：{mistakes_left}",
+        True,
+        (30, 30, 30)
+    )
+
+    screen.blit(
+        level_text,
+        (30, 30)
+    )
+
+    screen.blit(
+        arrow_text,
+        (30, 70)
+    )
+
+    screen.blit(
+        mistake_text,
+        (30, 110)
+    )
 
     # 绘制棋盘
     for row in range(ROWS):
