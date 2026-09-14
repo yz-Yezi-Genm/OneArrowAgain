@@ -11,11 +11,31 @@ pygame.init()
 clock = pygame.time.Clock()
 
 # =====================
+# UI 配色
+# =====================
+
+BG_COLOR = (247, 246, 240)          # 暖米白背景
+
+DARK_GREEN = (31, 73, 62)           # 主深绿色
+TEXT_MAIN = (42, 72, 63)            # 主文字
+TEXT_SECONDARY = (130, 143, 135)    # 次要文字
+
+LIGHT_GREEN = (229, 236, 226)        # 箭头格子
+LIGHT_GREEN_2 = (238, 242, 235)      # 更浅的格子
+CARD_COLOR = (253, 253, 249)         # 卡片背景
+
+ORANGE = (235, 153, 92)              # 强调橙色
+ORANGE_LIGHT = (247, 219, 197)
+
+LINE_COLOR = (221, 226, 217)         # 分割线
+WHITE = (255, 255, 255)
+
+# =====================
 # 窗口参数
 # =====================
 
-WIDTH = 800
-HEIGHT = 600
+WIDTH = 1100
+HEIGHT = 760
 
 screen = pygame.display.set_mode(
     (WIDTH, HEIGHT)
@@ -25,9 +45,74 @@ pygame.display.set_caption(
     "一箭又一箭"
 )
 
+# =====================
+# 加载开始界面背景图
+# =====================
+
+start_background = pygame.image.load(
+    "assets/start_background.png"
+).convert()
+
+# 将图片缩放到游戏窗口大小
+start_background = pygame.transform.smoothscale(
+    start_background,
+    (WIDTH, HEIGHT)
+)
+
+# =====================
+# 加载开始按钮图片
+# =====================
+
+# =====================
+# 加载开始按钮图片
+# =====================
+
+start_button_image = pygame.image.load(
+    "assets/start_button2.png"
+).convert_alpha()
+
+# 自动找到真正有内容的区域
+button_content_rect = start_button_image.get_bounding_rect()
+
+# 裁掉四周透明区域
+start_button_image = start_button_image.subsurface(
+    button_content_rect
+).copy()
+
+# 按钮基础大小
+START_BUTTON_WIDTH = 380
+START_BUTTON_HEIGHT = 110
+
+start_button_image = pygame.transform.smoothscale(
+    start_button_image,
+    (START_BUTTON_WIDTH, START_BUTTON_HEIGHT)
+)
+
+# 按钮在背景图上的原始中心位置
+START_BUTTON_CENTER = (550, 620)
+
+# 固定的按钮区域
+start_button = start_button_image.get_rect(
+    center=START_BUTTON_CENTER
+)
+
+# 动画参数
+start_button_scale = 1.0
+start_button_float = 0.0
+
+small_font = pygame.font.SysFont(
+    "Microsoft YaHei",
+    18
+)
+
 font = pygame.font.SysFont(
     "Microsoft YaHei",
-    26
+    24
+)
+
+medium_font = pygame.font.SysFont(
+    "Microsoft YaHei",
+    32
 )
 
 big_font = pygame.font.SysFont(
@@ -35,6 +120,10 @@ big_font = pygame.font.SysFont(
     48
 )
 
+title_font = pygame.font.SysFont(
+    "Microsoft YaHei",
+    58
+)
 # =====================
 # 颜色设置
 # =====================
@@ -88,14 +177,6 @@ next_button = pygame.Rect(
     450,
     140,
     50
-)
-
-# 开始游戏按钮
-start_button = pygame.Rect(
-    300,
-    350,
-    200,
-    60
 )
 
 home_button = pygame.Rect(
@@ -252,6 +333,75 @@ def draw_button(screen, rect, text, bg_color, border_color, text_color=TEXT_COLO
     screen.blit(
         text_surface,
         text_rect
+    )
+
+def draw_header():
+
+    # Logo
+    logo_rect = pygame.Rect(
+        55,
+        35,
+        55,
+        55
+    )
+
+    pygame.draw.rect(
+        screen,
+        DARK_GREEN,
+        logo_rect,
+        border_radius=14
+    )
+
+    # Logo 内部画一个简单右箭头
+    pygame.draw.line(
+        screen,
+        WHITE,
+        (70, 62),
+        (95, 62),
+        5
+    )
+
+    pygame.draw.polygon(
+        screen,
+        WHITE,
+        [
+            (95, 62),
+            (84, 51),
+            (84, 73)
+        ]
+    )
+
+    # 主标题
+    title_text = medium_font.render(
+        "一箭又一箭",
+        True,
+        DARK_GREEN
+    )
+
+    screen.blit(
+        title_text,
+        (130, 38)
+    )
+
+    # 副标题
+    subtitle_text = small_font.render(
+        "单格箭头解谜",
+        True,
+        TEXT_SECONDARY
+    )
+
+    screen.blit(
+        subtitle_text,
+        (132, 78)
+    )
+
+    # 顶部分隔线
+    pygame.draw.line(
+        screen,
+        LINE_COLOR,
+        (55, 120),
+        (1045, 120),
+        2
     )
 
 # =====================
@@ -687,63 +837,104 @@ while running:
 
     if game_state == "START":
 
-        # 标题
-        title_text = big_font.render(
-            "一箭又一箭",
-            True,
-            TEXT_COLOR
-        )
-        title_rect = title_text.get_rect(
-            center=(WIDTH // 2, 150)
-        )
-        screen.blit(title_text, title_rect)
+        # =====================
+        # 1. 绘制背景
+        # =====================
 
-        # 副标题
-        subtitle_text = font.render(
-            "Arrow Puzzle Game",
-            True,
-            SUB_TEXT_COLOR
+        screen.blit(
+            start_background,
+            (0, 0)
         )
-        subtitle_rect = subtitle_text.get_rect(
-            center=(WIDTH // 2, 205)
-        )
-        screen.blit(subtitle_text, subtitle_rect)
 
-        # 说明面板
-        intro_rect = pygame.Rect(180, 250, 440, 90)
+        # =====================
+        # 2. 绘制静态按钮
+        #    永远盖住背景图里的原按钮
+        # =====================
+
+        screen.blit(
+            start_button_image,
+            start_button
+        )
+
+        # =====================
+        # 3. 判断鼠标悬停
+        # =====================
+
+        mouse_pos = pygame.mouse.get_pos()
+
+        if start_button.collidepoint(mouse_pos):
+
+            # 放大
+            target_scale = 1.10
+
+            # 向上浮动 8 像素
+            target_float = -8
+
+        else:
+
+            target_scale = 1.0
+            target_float = 0
+
+        # =====================
+        # 4. 平滑动画
+        # =====================
+
+        start_button_scale += (
+                                      target_scale - start_button_scale
+                              ) * 0.18
+
+        start_button_float += (
+                                      target_float - start_button_float
+                              ) * 0.18
+
+        # =====================
+        # 5. 计算动画按钮大小
+        # =====================
+
+        button_width = int(
+            START_BUTTON_WIDTH * start_button_scale
+        )
+
+        button_height = int(
+            START_BUTTON_HEIGHT * start_button_scale
+        )
+
+        scaled_button = pygame.transform.smoothscale(
+            start_button_image,
+            (button_width, button_height)
+        )
+
+        # =====================
+        # 6. 动画按钮的位置
+        # =====================
+
+        scaled_button_rect = scaled_button.get_rect(
+            center=(
+                START_BUTTON_CENTER[0],
+                START_BUTTON_CENTER[1]
+                + int(start_button_float)
+            )
+        )
+
+        # =====================
+        # 7. 在静态按钮上再画动画按钮
+        # =====================
+
+        screen.blit(
+            scaled_button,
+            scaled_button_rect
+        )
+
+
+        '''
+        # 调试：显示开始按钮点击区域
         pygame.draw.rect(
             screen,
-            PANEL_COLOR,
-            intro_rect,
-            border_radius=16
-        )
-        pygame.draw.rect(
-            screen,
-            (220, 225, 232),
-            intro_rect,
-            2,
-            border_radius=16
-        )
-
-        tip_text = font.render(
-            "按照正确顺序点击箭头，让所有箭头飞出棋盘",
-            True,
-            SUB_TEXT_COLOR
-        )
-        tip_rect = tip_text.get_rect(
-            center=intro_rect.center
-        )
-        screen.blit(tip_text, tip_rect)
-
-        # 开始按钮
-        draw_button(
-            screen,
+            (255, 0, 0),
             start_button,
-            "开始游戏",
-            PRIMARY_COLOR,
-            PRIMARY_BORDER,
-            (255, 255, 255)
+            3
         )
+        '''
 
     else:
 
