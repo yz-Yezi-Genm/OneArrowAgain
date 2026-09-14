@@ -134,6 +134,59 @@ def draw_arrow(screen, row, col, direction):
             ]
         )
 
+# =====================
+# 判断箭头前方是否被阻挡
+# =====================
+
+def is_blocked(arrow, arrows):
+
+    row = arrow["row"]
+    col = arrow["col"]
+    direction = arrow["direction"]
+
+    # 遍历其他所有箭头
+    for other in arrows:
+
+        # 不需要拿自己和自己比较
+        if other is arrow:
+            continue
+
+        other_row = other["row"]
+        other_col = other["col"]
+
+        # 向右
+        if direction == "RIGHT":
+
+            # 同一行，并且其他箭头在自己的右边
+            if other_row == row and other_col > col:
+                return True
+
+        # 向左
+        elif direction == "LEFT":
+
+            # 同一行，并且其他箭头在自己的左边
+            if other_row == row and other_col < col:
+                return True
+
+        # 向上
+        elif direction == "UP":
+
+            # 同一列，并且其他箭头在自己的上方
+            if other_col == col and other_row < row:
+                return True
+
+        # 向下
+        elif direction == "DOWN":
+
+            # 同一列，并且其他箭头在自己的下方
+            if other_col == col and other_row > row:
+                return True
+
+    # 所有箭头都检查完仍然没发现障碍
+    return False
+
+
+
 
 # =====================
 # 箭头数据
@@ -191,14 +244,23 @@ while running:
                     for arrow in arrows:
 
                         if (
-                            arrow["row"] == row
-                            and arrow["col"] == col
+                                arrow["row"] == row
+                                and arrow["col"] == col
                         ):
 
                             print(
                                 "点击到了箭头：",
                                 arrow["direction"]
                             )
+
+                            # 判断箭头是否被阻挡
+                            if is_blocked(arrow, arrows):
+
+                                print("前方有箭头，被阻挡！")
+
+                            else:
+
+                                print("前方没有箭头，可以飞出！")
 
                             break
 
