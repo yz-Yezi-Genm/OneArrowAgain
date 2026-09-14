@@ -8,6 +8,7 @@ import sys
 
 pygame.init()
 
+clock = pygame.time.Clock()
 
 # =====================
 # 窗口参数
@@ -73,11 +74,18 @@ start_button = pygame.Rect(
 # 绘制箭头
 # =====================
 
-def draw_arrow(screen, row, col, direction):
+def draw_arrow(
+    screen,
+    row,
+    col,
+    direction,
+    offset_x=0,
+    offset_y=0,
+    color=(30, 30, 30)
+):
 
-    # 根据行列计算箭头所在格子的左上角坐标
-    x = BOARD_X + col * GRID_SIZE
-    y = BOARD_Y + row * GRID_SIZE
+    x = BOARD_X + col * GRID_SIZE + offset_x
+    y = BOARD_Y + row * GRID_SIZE + offset_y
 
     color = (30, 30, 30)
 
@@ -333,6 +341,23 @@ mistakes_left = MAX_MISTAKES
 game_state = "START"
 
 # =====================
+# 动画状态
+# =====================
+
+# 当前正在飞出的箭头
+flying_arrow = None
+
+# 飞出的距离
+fly_offset = 0
+
+# 被阻挡、正在显示碰撞效果的箭头
+blocked_arrow = None
+
+# 碰撞效果结束时间
+blocked_until = 0
+
+
+# =====================
 # 游戏循环
 # =====================
 
@@ -406,6 +431,10 @@ while running:
                 if game_state != "PLAYING":
                     continue
 
+                # 箭头飞行过程中暂时禁止继续点击
+                if flying_arrow is not None:
+                    continue
+
                 # 判断鼠标是否点击在棋盘范围内
                 if (
                     BOARD_X <= mouse_x < BOARD_X + COLS * GRID_SIZE
@@ -437,6 +466,10 @@ while running:
 
                                 print("前方有箭头，被阻挡！")
 
+                                blocked_arrow = arrow
+
+                                blocked_until = pygame.time.get_ticks() + 350
+
                                 # 扣除一次失误机会
                                 mistakes_left -= 1
 
@@ -453,8 +486,10 @@ while running:
 
                                 print("前方没有箭头，可以飞出！")
 
-                                # 从箭头列表中删除
-                                arrows.remove(arrow)
+                                # 开始飞出动画
+                                flying_arrow = arrow
+
+                                fly_offset = 0
 
                                 # 如果已经没有箭头，说明当前关卡完成
                                 if len(arrows) == 0:
@@ -481,6 +516,45 @@ while running:
     # =====================
     # 绘制游戏画面
     # =====================
+
+    # =====================
+    # 更新动画
+    # =====================
+
+    if flying_arrow is not None:
+
+        # 每一帧飞行的距离
+        speed = 12
+
+        fly_offset += speed
+
+        # 飞出足够远以后真正删除箭头
+        if fly_offset > 500:
+
+            arrows.remove(flying_arrow)
+
+            flying_arrow = None
+
+            fly_offset = 0
+
+            print("剩余箭头数量：", len(arrows))
+
+            # 当前关卡已经清空
+            if len(arrows) == 0:
+
+                # 最后一关
+                if current_level == len(LEVELS) - 1:
+
+                    game_state = "COMPLETE"
+
+                    print("恭喜！全部关卡通过！")
+
+                else:
+
+                    game_state = "WIN"
+
+                    print("恭喜，当前关卡通过！")
+
 
     # 背景颜色
     screen.fill(
@@ -617,11 +691,65 @@ while running:
         # 根据 arrows 数据绘制所有箭头
         for arrow in arrows:
 
+            offset_x = 0
+            offset_y = 0
+
+            color = (30, 30, 30)
+
+            # =====================
+            # 飞出动画
+            # =====================
+
+            if arrow is flying_arrow:
+
+                direction = arrow["direction"]
+
+                if direction == "RIGHT":
+                    offset_x = fly_offset
+
+                elif direction == "LEFT":
+                    offset_x = -fly_offset
+
+                elif direction == "UP":
+                    offset_y = -fly_offset
+
+                elif direction == "DOWN":
+                    offset_y = fly_offset
+
+            # =====================
+            # 碰撞动画
+            # =====================
+
+            if (
+                    arrow is blocked_arrow
+                    and pygame.time.get_ticks() < blocked_until
+            ):
+
+                # 碰撞时变成红色
+                color = (220, 50, 50)
+
+                # 每隔约50毫秒改变晃动方向
+                if (pygame.time.get_ticks() // 50) % 2 == 0:
+                    shake = 6
+                else:
+                    shake = -6
+
+                # 左右箭头沿水平方向晃动
+                if arrow["direction"] in ("LEFT", "RIGHT"):
+                    offset_x += shake
+
+                # 上下箭头沿垂直方向晃动
+                else:
+                    offset_y += shake
+
             draw_arrow(
                 screen,
                 arrow["row"],
                 arrow["col"],
-                arrow["direction"]
+                arrow["direction"],
+                offset_x,
+                offset_y,
+                color
             )
 
         # =====================
@@ -748,6 +876,8 @@ while running:
 
     # 刷新显示
     pygame.display.update()
+
+    clock.tick(60)
 
 
 # =====================
