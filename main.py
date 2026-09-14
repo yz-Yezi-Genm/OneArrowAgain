@@ -29,6 +29,11 @@ font = pygame.font.SysFont(
     26
 )
 
+big_font = pygame.font.SysFont(
+    "Microsoft YaHei",
+    48
+)
+
 # =====================
 # 棋盘参数
 # =====================
@@ -41,6 +46,13 @@ COLS = 5
 BOARD_X = 200
 BOARD_Y = 100
 
+# 重新开始按钮
+restart_button = pygame.Rect(
+    620,
+    520,
+    140,
+    50
+)
 
 # =====================
 # 绘制箭头
@@ -189,19 +201,37 @@ def is_blocked(arrow, arrows):
     # 所有箭头都检查完仍然没发现障碍
     return False
 
+def restart_game():
 
+    global arrows
+    global mistakes_left
+    global game_state
+
+    arrows = [
+        arrow.copy()
+        for arrow in INITIAL_ARROWS
+    ]
+
+    mistakes_left = MAX_MISTAKES
+
+    game_state = "PLAYING"
 
 
 # =====================
-# 箭头数据
+# =====================
+# 关卡初始数据
 # =====================
 
-arrows = [
+INITIAL_ARROWS = [
     {"row": 1, "col": 1, "direction": "RIGHT"},
     {"row": 1, "col": 2, "direction": "UP"},
     {"row": 2, "col": 1, "direction": "DOWN"},
     {"row": 2, "col": 2, "direction": "LEFT"}
 ]
+
+
+# 当前正在游戏中的箭头
+arrows = [arrow.copy() for arrow in INITIAL_ARROWS]
 
 # =====================
 # 游戏状态
@@ -209,6 +239,7 @@ arrows = [
 
 MAX_MISTAKES = 3
 mistakes_left = MAX_MISTAKES
+game_state = "PLAYING"
 
 # =====================
 # 游戏循环
@@ -236,6 +267,20 @@ while running:
 
                 # 获取鼠标点击位置
                 mouse_x, mouse_y = event.pos
+
+                # 点击重新开始按钮
+                if restart_button.collidepoint(
+                        mouse_x,
+                        mouse_y
+                ):
+                    restart_game()
+
+                    print("重新开始当前关卡")
+
+                    continue
+
+                if game_state != "PLAYING":
+                    continue
 
                 # 判断鼠标是否点击在棋盘范围内
                 if (
@@ -272,6 +317,10 @@ while running:
                                 mistakes_left -= 1
 
                                 if mistakes_left <= 0:
+                                    mistakes_left = 0
+
+                                    game_state = "FAILED"
+
                                     print("游戏失败！")
 
                                 print("剩余失误次数：", mistakes_left)
@@ -282,6 +331,12 @@ while running:
 
                                 # 从箭头列表中删除
                                 arrows.remove(arrow)
+
+                                # 如果已经没有箭头，说明通关
+                                if len(arrows) == 0:
+                                    game_state = "WIN"
+
+                                    print("恭喜，关卡通过！")
 
                                 print("剩余箭头数量：", len(arrows))
 
@@ -362,6 +417,79 @@ while running:
             arrow["row"],
             arrow["col"],
             arrow["direction"]
+        )
+
+    # =====================
+    # 重新开始按钮
+    # =====================
+
+    pygame.draw.rect(
+        screen,
+        (210, 210, 210),
+        restart_button,
+        border_radius=8
+    )
+
+    pygame.draw.rect(
+        screen,
+        (80, 80, 80),
+        restart_button,
+        2,
+        border_radius=8
+    )
+
+    restart_text = font.render(
+        "重新开始",
+        True,
+        (30, 30, 30)
+    )
+
+    restart_text_rect = restart_text.get_rect(
+        center=restart_button.center
+    )
+
+    screen.blit(
+        restart_text,
+        restart_text_rect
+    )
+
+    # =====================
+    # 游戏结果提示
+    # =====================
+
+    if game_state == "WIN":
+
+        result_text = big_font.render(
+            "恭喜通关！",
+            True,
+            (40, 150, 70)
+        )
+
+        result_rect = result_text.get_rect(
+            center=(WIDTH // 2, 50)
+        )
+
+        screen.blit(
+            result_text,
+            result_rect
+        )
+
+
+    elif game_state == "FAILED":
+
+        result_text = big_font.render(
+            "游戏失败！",
+            True,
+            (200, 60, 60)
+        )
+
+        result_rect = result_text.get_rect(
+            center=(WIDTH // 2, 50)
+        )
+
+        screen.blit(
+            result_text,
+            result_rect
         )
 
 
