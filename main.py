@@ -1,5 +1,6 @@
 import pygame
 import sys
+import random
 
 
 # =====================
@@ -7,6 +8,9 @@ import sys
 # =====================
 
 pygame.init()
+
+# 初始化音频系统
+pygame.mixer.init()
 
 clock = pygame.time.Clock()
 
@@ -44,6 +48,19 @@ screen = pygame.display.set_mode(
 pygame.display.set_caption(
     "一箭又一箭"
 )
+
+# =====================
+# 加载音效
+# =====================
+
+error_sound = pygame.mixer.Sound(
+    "assets/error.mp3"
+)
+
+# 设置音量
+# 0.0 = 静音
+# 1.0 = 最大
+error_sound.set_volume(0.5)
 
 # =====================
 # 加载开始界面背景图
@@ -161,12 +178,17 @@ GRID_SIZE = 80
 ROWS = 5
 COLS = 5
 
-BOARD_X = 200
-BOARD_Y = 100
+# 棋盘整体尺寸
+BOARD_WIDTH = COLS * GRID_SIZE
+BOARD_HEIGHT = ROWS * GRID_SIZE
+
+# 将棋盘放到窗口正中央
+BOARD_X = (WIDTH - BOARD_WIDTH) // 2
+BOARD_Y = (HEIGHT - BOARD_HEIGHT) // 2
 
 # 重新开始按钮
 restart_button = pygame.Rect(
-    620,
+    850,
     520,
     140,
     50
@@ -455,14 +477,113 @@ def is_blocked(arrow, arrows):
     # 所有箭头都检查完仍然没发现障碍
     return False
 
+# =====================
+# 随机生成可通关关卡
+# =====================
+
+def generate_solvable_level(num_arrows):
+
+    # 棋盘所有可能的位置
+    all_cells = [
+        (row, col)
+        for row in range(ROWS)
+        for col in range(COLS)
+    ]
+
+    # 最多尝试100次，避免极端随机情况
+    for attempt in range(100):
+
+        # 随机选取不重复的位置
+        solution_cells = random.sample(
+            all_cells,
+            num_arrows
+        )
+
+        generated_arrows = []
+
+        success = True
+
+        # 按“正确消除顺序”的反方向生成
+        for row, col in reversed(solution_cells):
+
+            valid_directions = []
+
+            # 尝试四种方向
+            for direction in (
+                "UP",
+                "DOWN",
+                "LEFT",
+                "RIGHT"
+            ):
+
+                candidate = {
+                    "row": row,
+                    "col": col,
+                    "direction": direction
+                }
+
+                # 临时把候选箭头加入关卡，
+                # 检查它在当前状态下是否可以飞出去
+                test_arrows = (
+                    generated_arrows
+                    + [candidate]
+                )
+
+                if not is_blocked(
+                    candidate,
+                    test_arrows
+                ):
+                    valid_directions.append(
+                        direction
+                    )
+
+            # 如果四个方向全都被挡住，
+            # 本次随机生成失败，重新生成
+            if not valid_directions:
+
+                success = False
+                break
+
+            # 从可行方向中随机选择一个
+            direction = random.choice(
+                valid_directions
+            )
+
+            generated_arrows.append(
+                {
+                    "row": row,
+                    "col": col,
+                    "direction": direction
+                }
+            )
+
+        if success:
+            return generated_arrows
+
+    # 理论上很少执行到这里
+    raise RuntimeError(
+        "无法生成可通关关卡"
+    )
+
+def generate_random_levels():
+
+    return [
+        generate_solvable_level(8),
+        generate_solvable_level(12),
+        generate_solvable_level(16)
+    ]
+
 def start_game():
 
     global current_level
     global arrows
     global mistakes_left
     global game_state
+    global LEVELS
 
-    # 从第一关开始
+    # 每次新游戏重新随机生成关卡
+    LEVELS = generate_random_levels()
+
     current_level = 0
 
     arrows = [
@@ -556,28 +677,11 @@ def next_level():
 # 关卡数据
 # =====================
 
-LEVELS = [
+# =====================
+# 随机关卡
+# =====================
 
-    # 第 1 关
-    [
-        {"row": 1, "col": 1, "direction": "RIGHT"},
-        {"row": 1, "col": 2, "direction": "UP"},
-        {"row": 2, "col": 1, "direction": "DOWN"},
-        {"row": 2, "col": 2, "direction": "LEFT"}
-    ],
-
-    # 第 2 关
-    [
-        {"row": 0, "col": 2, "direction": "UP"},
-        {"row": 2, "col": 2, "direction": "UP"}
-    ],
-
-    # 第 3 关
-    [
-        {"row": 0, "col": 1, "direction": "UP"},
-        {"row": 1, "col": 1, "direction": "UP"}
-    ]
-]
+LEVELS = generate_random_levels()
 
 
 # 当前关卡编号
@@ -735,6 +839,10 @@ while running:
                             if is_blocked(arrow, arrows):
 
                                 print("前方有箭头，被阻挡！")
+
+                                # 播放错误提示音
+                                error_sound.play()
+                                print("播放error音效")
 
                                 blocked_arrow = arrow
 
