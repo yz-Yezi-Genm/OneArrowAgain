@@ -54,6 +54,13 @@ restart_button = pygame.Rect(
     50
 )
 
+next_button = pygame.Rect(
+    620,
+    450,
+    140,
+    50
+)
+
 # =====================
 # 绘制箭头
 # =====================
@@ -209,29 +216,84 @@ def restart_game():
 
     arrows = [
         arrow.copy()
-        for arrow in INITIAL_ARROWS
+        for arrow in LEVELS[current_level]
     ]
 
     mistakes_left = MAX_MISTAKES
 
     game_state = "PLAYING"
 
+def next_level():
+
+    global current_level
+    global arrows
+    global mistakes_left
+    global game_state
+
+    # 如果还有下一关
+    if current_level < len(LEVELS) - 1:
+
+        current_level += 1
+
+        arrows = [
+            arrow.copy()
+            for arrow in LEVELS[current_level]
+        ]
+
+        mistakes_left = MAX_MISTAKES
+
+        game_state = "PLAYING"
+
+        print(
+            "进入第",
+            current_level + 1,
+            "关"
+        )
+
+    else:
+
+        # 所有关卡完成
+        game_state = "COMPLETE"
+
+        print("恭喜！全部关卡通过！")
 
 # =====================
-# =====================
-# 关卡初始数据
+# 关卡数据
 # =====================
 
-INITIAL_ARROWS = [
-    {"row": 1, "col": 1, "direction": "RIGHT"},
-    {"row": 1, "col": 2, "direction": "UP"},
-    {"row": 2, "col": 1, "direction": "DOWN"},
-    {"row": 2, "col": 2, "direction": "LEFT"}
+LEVELS = [
+
+    # 第 1 关
+    [
+        {"row": 1, "col": 1, "direction": "RIGHT"},
+        {"row": 1, "col": 2, "direction": "UP"},
+        {"row": 2, "col": 1, "direction": "DOWN"},
+        {"row": 2, "col": 2, "direction": "LEFT"}
+    ],
+
+    # 第 2 关
+    [
+        {"row": 0, "col": 2, "direction": "UP"},
+        {"row": 2, "col": 2, "direction": "UP"}
+    ],
+
+    # 第 3 关
+    [
+        {"row": 0, "col": 1, "direction": "UP"},
+        {"row": 1, "col": 1, "direction": "UP"}
+    ]
 ]
 
 
-# 当前正在游戏中的箭头
-arrows = [arrow.copy() for arrow in INITIAL_ARROWS]
+# 当前关卡编号
+current_level = 0
+
+
+# 加载当前关卡的箭头
+arrows = [
+    arrow.copy()
+    for arrow in LEVELS[current_level]
+]
 
 # =====================
 # 游戏状态
@@ -267,6 +329,18 @@ while running:
 
                 # 获取鼠标点击位置
                 mouse_x, mouse_y = event.pos
+
+                # 点击下一关按钮
+                if (
+                        game_state == "WIN"
+                        and next_button.collidepoint(
+                    mouse_x,
+                    mouse_y
+                )
+                ):
+                    next_level()
+
+                    continue
 
                 # 点击重新开始按钮
                 if restart_button.collidepoint(
@@ -332,11 +406,22 @@ while running:
                                 # 从箭头列表中删除
                                 arrows.remove(arrow)
 
-                                # 如果已经没有箭头，说明通关
+                                # 如果已经没有箭头，说明当前关卡完成
                                 if len(arrows) == 0:
-                                    game_state = "WIN"
 
-                                    print("恭喜，关卡通过！")
+                                    # 如果当前已经是最后一关
+                                    if current_level == len(LEVELS) - 1:
+
+                                        game_state = "COMPLETE"
+
+                                        print("恭喜！全部关卡通过！")
+
+                                    # 如果后面还有关卡
+                                    else:
+
+                                        game_state = "WIN"
+
+                                        print("恭喜，当前关卡通过！")
 
                                 print("剩余箭头数量：", len(arrows))
 
@@ -357,7 +442,7 @@ while running:
     # =====================
 
     level_text = font.render(
-        "当前关卡：1",
+        f"当前关卡：{current_level + 1}",
         True,
         (30, 30, 30)
     )
@@ -453,6 +538,38 @@ while running:
         restart_text_rect
     )
 
+    # 如果当前关卡已经通过，显示下一关按钮
+    if game_state == "WIN":
+        pygame.draw.rect(
+            screen,
+            (180, 220, 180),
+            next_button,
+            border_radius=8
+        )
+
+        pygame.draw.rect(
+            screen,
+            (60, 120, 60),
+            next_button,
+            2,
+            border_radius=8
+        )
+
+        next_text = font.render(
+            "下一关",
+            True,
+            (30, 30, 30)
+        )
+
+        next_text_rect = next_text.get_rect(
+            center=next_button.center
+        )
+
+        screen.blit(
+            next_text,
+            next_text_rect
+        )
+
     # =====================
     # 游戏结果提示
     # =====================
@@ -492,6 +609,22 @@ while running:
             result_rect
         )
 
+    elif game_state == "COMPLETE":
+
+        result_text = big_font.render(
+            "全部关卡完成！",
+            True,
+            (40, 150, 70)
+        )
+
+        result_rect = result_text.get_rect(
+            center=(WIDTH // 2, 50)
+        )
+
+        screen.blit(
+            result_text,
+            result_rect
+        )
 
     # 刷新显示
     pygame.display.update()
