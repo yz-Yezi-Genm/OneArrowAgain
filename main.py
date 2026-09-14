@@ -70,6 +70,13 @@ start_button = pygame.Rect(
     60
 )
 
+home_button = pygame.Rect(
+    300,
+    430,
+    200,
+    55
+)
+
 # =====================
 # 绘制箭头
 # =====================
@@ -258,6 +265,35 @@ def restart_game():
 
     game_state = "PLAYING"
 
+def go_home():
+
+    global game_state
+    global current_level
+    global arrows
+    global mistakes_left
+
+    global flying_arrow
+    global fly_offset
+    global blocked_arrow
+    global blocked_until
+
+    current_level = 0
+
+    arrows = [
+        arrow.copy()
+        for arrow in LEVELS[current_level]
+    ]
+
+    mistakes_left = MAX_MISTAKES
+
+    flying_arrow = None
+    fly_offset = 0
+
+    blocked_arrow = None
+    blocked_until = 0
+
+    game_state = "START"
+
 def next_level():
 
     global current_level
@@ -387,6 +423,16 @@ while running:
                 # =====================
                 # 开始界面
                 # =====================
+
+                if game_state in ("WIN", "FAILED", "COMPLETE"):
+
+                    if home_button.collidepoint(
+                            mouse_x,
+                            mouse_y
+                    ):
+                        go_home()
+
+                        continue
 
                 if game_state == "START":
 
@@ -755,36 +801,36 @@ while running:
         # =====================
         # 重新开始按钮
         # =====================
+        if game_state in ("PLAYING", "FAILED"):
+            pygame.draw.rect(
+                screen,
+                (210, 210, 210),
+                restart_button,
+                border_radius=8
+            )
 
-        pygame.draw.rect(
-            screen,
-            (210, 210, 210),
-            restart_button,
-            border_radius=8
-        )
+            pygame.draw.rect(
+                screen,
+                (80, 80, 80),
+                restart_button,
+                2,
+                border_radius=8
+            )
 
-        pygame.draw.rect(
-            screen,
-            (80, 80, 80),
-            restart_button,
-            2,
-            border_radius=8
-        )
+            restart_text = font.render(
+                "重新开始",
+                True,
+                (30, 30, 30)
+            )
 
-        restart_text = font.render(
-            "重新开始",
-            True,
-            (30, 30, 30)
-        )
+            restart_text_rect = restart_text.get_rect(
+                center=restart_button.center
+            )
 
-        restart_text_rect = restart_text.get_rect(
-            center=restart_button.center
-        )
-
-        screen.blit(
-            restart_text,
-            restart_text_rect
-        )
+            screen.blit(
+                restart_text,
+                restart_text_rect
+            )
 
         # 如果当前关卡已经通过，显示下一关按钮
         if game_state == "WIN":
@@ -873,6 +919,39 @@ while running:
                 result_text,
                 result_rect
             )
+
+    if game_state in ("WIN", "FAILED", "COMPLETE"):
+        pygame.draw.rect(
+            screen,
+            (220, 220, 220),
+            home_button,
+            border_radius=10
+        )
+
+        pygame.draw.rect(
+            screen,
+            (80, 80, 80),
+            home_button,
+            2,
+            border_radius=10
+        )
+
+        home_text = font.render(
+            "返回首页",
+            True,
+            (30, 30, 30)
+        )
+
+        home_text_rect = home_text.get_rect(
+            center=home_button.center
+        )
+
+        screen.blit(
+            home_text,
+            home_text_rect
+        )
+
+
 
     # 刷新显示
     pygame.display.update()
