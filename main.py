@@ -36,6 +36,34 @@ big_font = pygame.font.SysFont(
 )
 
 # =====================
+# 颜色设置
+# =====================
+
+BG_COLOR = (245, 247, 250)          # 整体背景
+PANEL_COLOR = (255, 255, 255)       # 面板白色
+BOARD_BG_COLOR = (250, 251, 253)    # 棋盘背景
+GRID_COLOR = (210, 215, 223)        # 网格线颜色
+
+TEXT_COLOR = (40, 44, 52)           # 主要文字
+SUB_TEXT_COLOR = (110, 118, 129)    # 次要文字
+
+PRIMARY_COLOR = (91, 143, 249)      # 主按钮蓝色
+PRIMARY_BORDER = (60, 110, 210)
+
+SUCCESS_COLOR = (95, 184, 120)      # 成功绿色
+SUCCESS_BORDER = (60, 140, 90)
+
+DANGER_COLOR = (225, 95, 95)        # 失败红色
+DANGER_BORDER = (180, 65, 65)
+
+NEUTRAL_BUTTON = (230, 233, 238)    # 中性按钮灰色
+NEUTRAL_BORDER = (150, 155, 165)
+
+CARD_LEVEL = (232, 242, 255)
+CARD_ARROW = (235, 248, 235)
+CARD_MISTAKE = (255, 240, 230)
+
+# =====================
 # 棋盘参数
 # =====================
 
@@ -88,7 +116,7 @@ def draw_arrow(
     direction,
     offset_x=0,
     offset_y=0,
-    color=(30, 30, 30)
+    color=(70, 90, 120)
 ):
 
     x = BOARD_X + col * GRID_SIZE + offset_x
@@ -179,6 +207,52 @@ def draw_arrow(
                 (x + 55, y + 45)
             ]
         )
+
+def draw_button(screen, rect, text, bg_color, border_color, text_color=TEXT_COLOR):
+
+    mouse_pos = pygame.mouse.get_pos()
+
+    # 悬停时稍微变亮一点
+    is_hover = rect.collidepoint(mouse_pos)
+
+    if is_hover:
+        draw_color = (
+            min(bg_color[0] + 10, 255),
+            min(bg_color[1] + 10, 255),
+            min(bg_color[2] + 10, 255)
+        )
+    else:
+        draw_color = bg_color
+
+    pygame.draw.rect(
+        screen,
+        draw_color,
+        rect,
+        border_radius=12
+    )
+
+    pygame.draw.rect(
+        screen,
+        border_color,
+        rect,
+        2,
+        border_radius=12
+    )
+
+    text_surface = font.render(
+        text,
+        True,
+        text_color
+    )
+
+    text_rect = text_surface.get_rect(
+        center=rect.center
+    )
+
+    screen.blit(
+        text_surface,
+        text_rect
+    )
 
 # =====================
 # 判断箭头前方是否被阻挡
@@ -612,70 +686,74 @@ while running:
     # =====================
 
     if game_state == "START":
-        # 游戏标题
+
+        # 标题
         title_text = big_font.render(
             "一箭又一箭",
             True,
-            (40, 40, 40)
+            TEXT_COLOR
         )
-
         title_rect = title_text.get_rect(
-            center=(WIDTH // 2, 180)
+            center=(WIDTH // 2, 150)
+        )
+        screen.blit(title_text, title_rect)
+
+        # 副标题
+        subtitle_text = font.render(
+            "Arrow Puzzle Game",
+            True,
+            SUB_TEXT_COLOR
+        )
+        subtitle_rect = subtitle_text.get_rect(
+            center=(WIDTH // 2, 205)
+        )
+        screen.blit(subtitle_text, subtitle_rect)
+
+        # 说明面板
+        intro_rect = pygame.Rect(180, 250, 440, 90)
+        pygame.draw.rect(
+            screen,
+            PANEL_COLOR,
+            intro_rect,
+            border_radius=16
+        )
+        pygame.draw.rect(
+            screen,
+            (220, 225, 232),
+            intro_rect,
+            2,
+            border_radius=16
         )
 
-        screen.blit(
-            title_text,
-            title_rect
-        )
-
-        # 游戏说明
         tip_text = font.render(
             "按照正确顺序点击箭头，让所有箭头飞出棋盘",
             True,
-            (90, 90, 90)
+            SUB_TEXT_COLOR
         )
-
         tip_rect = tip_text.get_rect(
-            center=(WIDTH // 2, 260)
+            center=intro_rect.center
         )
-
-        screen.blit(
-            tip_text,
-            tip_rect
-        )
+        screen.blit(tip_text, tip_rect)
 
         # 开始按钮
-        pygame.draw.rect(
+        draw_button(
             screen,
-            (190, 220, 190),
             start_button,
-            border_radius=10
-        )
-
-        pygame.draw.rect(
-            screen,
-            (60, 120, 60),
-            start_button,
-            2,
-            border_radius=10
-        )
-
-        start_text = font.render(
             "开始游戏",
-            True,
-            (30, 30, 30)
-        )
-
-        start_text_rect = start_text.get_rect(
-            center=start_button.center
-        )
-
-        screen.blit(
-            start_text,
-            start_text_rect
+            PRIMARY_COLOR,
+            PRIMARY_BORDER,
+            (255, 255, 255)
         )
 
     else:
+
+        # 页面标题
+        page_title = big_font.render(
+            "一箭又一箭",
+            True,
+            TEXT_COLOR
+        )
+        screen.blit(page_title, (30, 20))
 
         # =====================
         # 显示游戏信息
@@ -699,26 +777,61 @@ while running:
             (30, 30, 30)
         )
 
-        screen.blit(
-            level_text,
-            (30, 30)
+        # 信息卡片区域
+        level_card = pygame.Rect(30, 100, 150, 70)
+        arrow_card = pygame.Rect(30, 185, 150, 70)
+        mistake_card = pygame.Rect(30, 270, 150, 70)
+
+        pygame.draw.rect(screen, CARD_LEVEL, level_card, border_radius=14)
+        pygame.draw.rect(screen, CARD_ARROW, arrow_card, border_radius=14)
+        pygame.draw.rect(screen, CARD_MISTAKE, mistake_card, border_radius=14)
+
+        pygame.draw.rect(screen, (200, 210, 220), level_card, 2, border_radius=14)
+        pygame.draw.rect(screen, (200, 210, 220), arrow_card, 2, border_radius=14)
+        pygame.draw.rect(screen, (200, 210, 220), mistake_card, 2, border_radius=14)
+
+        level_label = font.render("当前关卡", True, SUB_TEXT_COLOR)
+        arrow_label = font.render("剩余箭头", True, SUB_TEXT_COLOR)
+        mistake_label = font.render("剩余失误", True, SUB_TEXT_COLOR)
+
+        level_value = font.render(f"{current_level + 1}", True, TEXT_COLOR)
+        arrow_value = font.render(f"{len(arrows)}", True, TEXT_COLOR)
+        mistake_value = font.render(f"{mistakes_left}", True, TEXT_COLOR)
+
+        screen.blit(level_label, (50, 112))
+        screen.blit(level_value, (50, 138))
+
+        screen.blit(arrow_label, (50, 197))
+        screen.blit(arrow_value, (50, 223))
+
+        screen.blit(mistake_label, (50, 282))
+        screen.blit(mistake_value, (50, 308))
+
+        board_panel = pygame.Rect(
+            BOARD_X - 20,
+            BOARD_Y - 20,
+            COLS * GRID_SIZE + 40,
+            ROWS * GRID_SIZE + 40
         )
 
-        screen.blit(
-            arrow_text,
-            (30, 70)
+        pygame.draw.rect(
+            screen,
+            PANEL_COLOR,
+            board_panel,
+            border_radius=18
         )
 
-        screen.blit(
-            mistake_text,
-            (30, 110)
+        pygame.draw.rect(
+            screen,
+            (220, 225, 232),
+            board_panel,
+            2,
+            border_radius=18
         )
 
         # 绘制棋盘
         for row in range(ROWS):
-
             for col in range(COLS):
-
                 rect = pygame.Rect(
                     BOARD_X + col * GRID_SIZE,
                     BOARD_Y + row * GRID_SIZE,
@@ -728,11 +841,18 @@ while running:
 
                 pygame.draw.rect(
                     screen,
-                    (180, 180, 180),
+                    BOARD_BG_COLOR,
                     rect,
-                    2
+                    border_radius=8
                 )
 
+                pygame.draw.rect(
+                    screen,
+                    GRID_COLOR,
+                    rect,
+                    2,
+                    border_radius=8
+                )
 
         # 根据 arrows 数据绘制所有箭头
         for arrow in arrows:
@@ -802,67 +922,26 @@ while running:
         # 重新开始按钮
         # =====================
         if game_state in ("PLAYING", "FAILED"):
-            pygame.draw.rect(
+            draw_button(
                 screen,
-                (210, 210, 210),
                 restart_button,
-                border_radius=8
-            )
-
-            pygame.draw.rect(
-                screen,
-                (80, 80, 80),
-                restart_button,
-                2,
-                border_radius=8
-            )
-
-            restart_text = font.render(
                 "重新开始",
-                True,
-                (30, 30, 30)
-            )
-
-            restart_text_rect = restart_text.get_rect(
-                center=restart_button.center
-            )
-
-            screen.blit(
-                restart_text,
-                restart_text_rect
+                NEUTRAL_BUTTON,
+                NEUTRAL_BORDER,
+                TEXT_COLOR
             )
 
         # 如果当前关卡已经通过，显示下一关按钮
         if game_state == "WIN":
-            pygame.draw.rect(
-                screen,
-                (180, 220, 180),
-                next_button,
-                border_radius=8
-            )
-
-            pygame.draw.rect(
-                screen,
-                (60, 120, 60),
-                next_button,
-                2,
-                border_radius=8
-            )
-
-            next_text = font.render(
-                "下一关",
-                True,
-                (30, 30, 30)
-            )
-
-            next_text_rect = next_text.get_rect(
-                center=next_button.center
-            )
-
-            screen.blit(
-                next_text,
-                next_text_rect
-            )
+            if game_state == "WIN":
+                draw_button(
+                    screen,
+                    next_button,
+                    "下一关",
+                    SUCCESS_COLOR,
+                    SUCCESS_BORDER,
+                    (255, 255, 255)
+                )
 
         # =====================
         # 游戏结果提示
@@ -873,17 +952,18 @@ while running:
             result_text = big_font.render(
                 "恭喜通关！",
                 True,
-                (40, 150, 70)
+                SUCCESS_BORDER
             )
+            result_rect = result_text.get_rect(center=(WIDTH // 2, 60))
+            screen.blit(result_text, result_rect)
 
-            result_rect = result_text.get_rect(
-                center=(WIDTH // 2, 50)
+            sub_text = font.render(
+                "当前关卡已完成，点击下一关继续挑战",
+                True,
+                SUB_TEXT_COLOR
             )
-
-            screen.blit(
-                result_text,
-                result_rect
-            )
+            sub_rect = sub_text.get_rect(center=(WIDTH // 2, 105))
+            screen.blit(sub_text, sub_rect)
 
 
         elif game_state == "FAILED":
@@ -891,65 +971,49 @@ while running:
             result_text = big_font.render(
                 "游戏失败！",
                 True,
-                (200, 60, 60)
+                DANGER_BORDER
             )
+            result_rect = result_text.get_rect(center=(WIDTH // 2, 60))
+            screen.blit(result_text, result_rect)
 
-            result_rect = result_text.get_rect(
-                center=(WIDTH // 2, 50)
+            sub_text = font.render(
+                "失误次数已耗尽，可以重新开始或返回首页",
+                True,
+                SUB_TEXT_COLOR
             )
+            sub_rect = sub_text.get_rect(center=(WIDTH // 2, 105))
+            screen.blit(sub_text, sub_rect)
 
-            screen.blit(
-                result_text,
-                result_rect
-            )
 
         elif game_state == "COMPLETE":
 
             result_text = big_font.render(
                 "全部关卡完成！",
                 True,
-                (40, 150, 70)
+                SUCCESS_BORDER
             )
+            result_rect = result_text.get_rect(center=(WIDTH // 2, 60))
+            screen.blit(result_text, result_rect)
 
-            result_rect = result_text.get_rect(
-                center=(WIDTH // 2, 50)
+            sub_text = font.render(
+                "恭喜你完成了所有关卡挑战！",
+                True,
+                SUB_TEXT_COLOR
             )
+            sub_rect = sub_text.get_rect(center=(WIDTH // 2, 105))
+            screen.blit(sub_text, sub_rect)
 
-            screen.blit(
-                result_text,
-                result_rect
-            )
 
     if game_state in ("WIN", "FAILED", "COMPLETE"):
-        pygame.draw.rect(
-            screen,
-            (220, 220, 220),
-            home_button,
-            border_radius=10
-        )
-
-        pygame.draw.rect(
-            screen,
-            (80, 80, 80),
-            home_button,
-            2,
-            border_radius=10
-        )
-
-        home_text = font.render(
-            "返回首页",
-            True,
-            (30, 30, 30)
-        )
-
-        home_text_rect = home_text.get_rect(
-            center=home_button.center
-        )
-
-        screen.blit(
-            home_text,
-            home_text_rect
-        )
+        if game_state in ("WIN", "FAILED", "COMPLETE"):
+            draw_button(
+                screen,
+                home_button,
+                "返回首页",
+                PRIMARY_COLOR,
+                PRIMARY_BORDER,
+                (255, 255, 255)
+            )
 
 
 
