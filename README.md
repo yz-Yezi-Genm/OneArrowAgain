@@ -91,15 +91,15 @@ OneArrowAgain.exe
 
 ### 开始界面
 
-![开始界面](assets/start_screen.png)
+![开始界面](screenshots/1开始界面.png)
 
 ### 游戏界面
 
-![游戏界面](assets/game_screen.png)
+![游戏界面](screenshots/2游戏画面.png)
 
 ### 通关界面
 
-![通关界面](assets/win_screen.png)
+![通关界面](screenshots/3通关画面.png)
 
 > 截图文件名可根据实际保存的图片名称进行修改。
 
