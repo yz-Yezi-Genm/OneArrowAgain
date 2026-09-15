@@ -215,7 +215,7 @@ pygame.mixer.music.load(
 )
 
 # 背景音乐音量低一些
-pygame.mixer.music.set_volume(0.6)
+pygame.mixer.music.set_volume(1)
 
 # 设置音量
 # 0.0 = 静音
@@ -371,6 +371,22 @@ restart_button = pygame.Rect(
 
 home_button = pygame.Rect(
     850,
+    390,
+    190,
+    58
+)
+
+# AI 自动求解按钮
+ai_button = pygame.Rect(
+    60,
+    310,
+    190,
+    58
+)
+
+# AI 提示一步按钮
+hint_button = pygame.Rect(
+    60,
     390,
     190,
     58
@@ -1333,6 +1349,159 @@ def is_blocked(arrow, arrows):
     return False
 
 # =====================
+# AI 自动求解当前关卡
+# =====================
+
+def solve_level(current_arrows):
+
+    # 复制当前棋盘，避免修改真正的游戏数据
+    test_arrows = [
+        arrow.copy()
+        for arrow in current_arrows
+    ]
+
+    # 用于记录完整解法
+    solution = []
+
+    # 只要棋盘上还有箭头，就继续求解
+    while test_arrows:
+
+        found_arrow = False
+
+        # 从当前棋盘中寻找一个可以飞出的箭头
+        for arrow in test_arrows:
+
+            if not is_blocked(
+                    arrow,
+                    test_arrows
+            ):
+
+                # 记录这一步
+                solution.append(
+                    arrow.copy()
+                )
+
+                # 在模拟棋盘中删除该箭头
+                test_arrows.remove(
+                    arrow
+                )
+
+                found_arrow = True
+
+                # 删除一个以后重新分析棋盘
+                break
+
+        # 一个可以飞出的箭头都找不到
+        # 说明当前棋盘无解
+        if not found_arrow:
+
+            return None
+
+    # 所有箭头都成功删除
+    return solution
+
+def show_ai_hint():
+
+    global hint_arrow
+    global hint_until
+
+    # 使用现有 AI 求解器分析当前局面
+    solution = solve_level(
+        arrows
+    )
+
+    # 没有找到解
+    if solution is None or len(solution) == 0:
+
+        print("AI：当前没有可提示的步骤")
+        return
+
+    # 取完整解法中的第一步
+    next_step = solution[0]
+
+    # 在真实棋盘中找到对应箭头
+    for arrow in arrows:
+
+        if (
+                arrow["row"] == next_step["row"]
+                and arrow["col"] == next_step["col"]
+                and arrow["direction"] == next_step["direction"]
+        ):
+
+            hint_arrow = arrow
+
+            # 高亮持续 2.5 秒
+            hint_until = (
+                    pygame.time.get_ticks()
+                    + 2500
+            )
+
+            print(
+                "AI 提示：",
+                arrow["row"] + 1,
+                "行",
+                arrow["col"] + 1,
+                "列",
+                arrow["direction"]
+            )
+
+            return
+
+def start_next_ai_step():
+
+    global ai_solving
+    global ai_solution
+    global flying_arrow
+    global fly_offset
+
+    # AI 没有运行
+    if not ai_solving:
+        return
+
+    # 已经没有剩余步骤
+    if not ai_solution:
+
+        ai_solving = False
+
+        print("AI 自动求解结束")
+
+        return
+
+    # 取出下一步
+    next_step = ai_solution.pop(0)
+
+    # 在真正的棋盘中寻找对应箭头
+    for arrow in arrows:
+
+        if (
+                arrow["row"] == next_step["row"]
+                and arrow["col"] == next_step["col"]
+                and arrow["direction"] == next_step["direction"]
+        ):
+
+            # 让原来的飞行动画系统处理这支箭头
+            flying_arrow = arrow
+
+            fly_offset = 0
+
+            print(
+                "AI 执行：",
+                arrow["row"] + 1,
+                "行",
+                arrow["col"] + 1,
+                "列",
+                arrow["direction"]
+            )
+
+            return
+
+    # 正常情况下不会执行到这里
+    print("AI 求解中断：没有找到对应箭头")
+
+    ai_solving = False
+    ai_solution.clear()
+
+# =====================
 # 随机生成可通关关卡
 # =====================
 
@@ -1440,7 +1609,13 @@ def start_game():
     global level_start_time
     global elapsed_time
 
+    global hint_arrow
+    global hint_until
+
     history.clear()
+
+    hint_arrow = None
+    hint_until = 0
 
     # 每次新游戏重新随机生成关卡
     LEVELS = generate_random_levels()
@@ -1479,7 +1654,19 @@ def restart_game():
     global level_start_time
     global elapsed_time
 
+    global ai_solving
+    global ai_solution
+
+    global hint_arrow
+    global hint_until
+
     history.clear()
+
+    hint_arrow = None
+    hint_until = 0
+
+    ai_solving = False
+    ai_solution.clear()
 
     arrows = [
         arrow.copy()
@@ -1515,7 +1702,20 @@ def go_home():
     global elapsed_time
 
     global history
+
+    global ai_solving
+    global ai_solution
+
+    global hint_arrow
+    global hint_until
+
     history.clear()
+
+    ai_solving = False
+    ai_solution.clear()
+
+    hint_arrow = None
+    hint_until = 0
 
     current_level = 0
 
@@ -1551,7 +1751,13 @@ def next_level():
     global level_start_time
     global elapsed_time
 
+    global hint_arrow
+    global hint_until
+
     history.clear()
+
+    hint_arrow = None
+    hint_until = 0
 
     if current_level < len(LEVELS) - 1:
 
@@ -1643,6 +1849,25 @@ blocked_arrow = None
 # 碰撞效果结束时间
 blocked_until = 0
 
+# =====================
+# AI 自动求解状态
+# =====================
+
+# AI 当前是否正在自动求解
+ai_solving = False
+
+# AI 尚未执行的解题步骤
+ai_solution = []
+
+# =====================
+# AI 提示状态
+# =====================
+
+# 当前被 AI 提示的箭头
+hint_arrow = None
+
+# 提示结束时间
+hint_until = 0
 
 # =====================
 # 游戏循环
@@ -1686,6 +1911,7 @@ while running:
                         if (
                                 flying_arrow is None
                                 and blocked_arrow is None
+                                and not ai_solving
                         ):
                             undo_last_move()
 
@@ -1706,6 +1932,67 @@ while running:
                             mouse_y
                     ):
                         go_home()
+
+                        continue
+
+                    # AI 自动求解
+                    # =====================
+
+                    if ai_button.collidepoint(
+                            mouse_x,
+                            mouse_y
+                    ):
+
+                        # 当前没有动画时才能启动 AI
+                        if (
+                                flying_arrow is None
+                                and blocked_arrow is None
+                                and not ai_solving
+                        ):
+
+                            solution = solve_level(
+                                arrows
+                            )
+
+                            if solution is None:
+
+                                print("AI：当前关卡无解")
+
+                            else:
+
+                                print("=====================")
+                                print("AI 已找到解法")
+                                print("共", len(solution), "步")
+                                print("=====================")
+
+                                ai_solution = [
+                                    arrow.copy()
+                                    for arrow in solution
+                                ]
+
+                                ai_solving = True
+
+                                # 执行第一步
+                                start_next_ai_step()
+
+                        continue
+
+                    # =====================
+                    # AI 提示一步
+                    # =====================
+
+                    if hint_button.collidepoint(
+                            mouse_x,
+                            mouse_y
+                    ):
+
+                        # 动画和自动求解期间不允许提示
+                        if (
+                                flying_arrow is None
+                                and blocked_arrow is None
+                                and not ai_solving
+                        ):
+                            show_ai_hint()
 
                         continue
 
@@ -1775,6 +2062,10 @@ while running:
                 ):
                     continue
 
+                # AI 自动求解期间禁止玩家手动点击棋盘
+                if ai_solving:
+                    continue
+
                 # 判断鼠标是否点击在棋盘范围内
                 if (
                     BOARD_X <= mouse_x < BOARD_X + COLS * GRID_SIZE
@@ -1800,6 +2091,9 @@ while running:
                                 "点击到了箭头：",
                                 arrow["direction"]
                             )
+
+                            # 玩家已经选择箭头，取消 AI 提示
+                            hint_arrow = None
 
                             # 执行本次操作前保存游戏状态
                             save_history()
@@ -1886,16 +2180,27 @@ while running:
                 fly_offset
         ):
 
+            # 删除已经飞出屏幕的箭头
             arrows.remove(flying_arrow)
 
             flying_arrow = None
 
             fly_offset = 0
 
-            print("剩余箭头数量：", len(arrows))
+            print(
+                "剩余箭头数量：",
+                len(arrows)
+            )
 
+            # =====================
             # 当前关卡已经清空
+            # =====================
+
             if len(arrows) == 0:
+
+                # AI 自动求解结束
+                ai_solving = False
+                ai_solution.clear()
 
                 # 播放通关音效
                 levelup_sound.play()
@@ -1905,13 +2210,25 @@ while running:
 
                     game_state = "COMPLETE"
 
-                    print("恭喜！全部关卡通过！")
+                    print(
+                        "恭喜！全部关卡通过！"
+                    )
 
                 else:
 
                     game_state = "WIN"
 
-                    print("恭喜，当前关卡通过！")
+                    print(
+                        "恭喜，当前关卡通过！"
+                    )
+
+            # =====================
+            # AI 继续执行下一步
+            # =====================
+
+            elif ai_solving:
+
+                start_next_ai_step()
 
     # =====================
     # 更新碰撞动画
@@ -1921,6 +2238,15 @@ while running:
 
         if pygame.time.get_ticks() >= blocked_until:
             blocked_arrow = None
+
+    # =====================
+    # 更新 AI 提示
+    # =====================
+
+    if hint_arrow is not None:
+
+        if pygame.time.get_ticks() >= hint_until:
+            hint_arrow = None
 
     # 背景颜色
     screen.fill(
@@ -2398,17 +2724,35 @@ while running:
                         and col == hover_col
                 )
 
+                # 当前格子是否是 AI 正在处理的箭头
+                is_ai_target = (
+                        ai_solving
+                        and flying_arrow is not None
+                        and flying_arrow["row"] == row
+                        and flying_arrow["col"] == col
+                )
+
+                # 当前格子是否是 AI 提示的箭头
+                is_hint_target = (
+                        hint_arrow is not None
+                        and pygame.time.get_ticks() < hint_until
+                        and hint_arrow["row"] == row
+                        and hint_arrow["col"] == col
+                )
+
                 # 有箭头
                 if has_arrow:
 
-                    # 鼠标悬停到箭头
-                    if is_hover and game_state == "PLAYING":
+                    # AI 自动求解或 AI 提示
+                    if is_ai_target or is_hint_target:
+                        cell_color = ORANGE
+
+                    elif is_hover and game_state == "PLAYING":
                         cell_color = ARROW_CELL_HOVER
 
                     else:
                         cell_color = ARROW_CELL_COLOR
 
-                # 空格
                 else:
 
                     cell_color = EMPTY_CELL_COLOR
@@ -2416,7 +2760,11 @@ while running:
                 # 鼠标悬停时增加轻微外圈
                 if (
                         has_arrow
-                        and is_hover
+                        and (
+                        is_hover
+                        or is_ai_target
+                        or is_hint_target
+                )
                         and game_state == "PLAYING"
                 ):
                     glow_rect = rect.inflate(
@@ -2442,7 +2790,11 @@ while running:
                 # 悬停在箭头上时使用橙色边框
                 if (
                         has_arrow
-                        and is_hover
+                        and (
+                        is_hover
+                        or is_ai_target
+                        or is_hint_target
+                )
                         and game_state == "PLAYING"
                 ):
 
@@ -2555,6 +2907,25 @@ while running:
                 screen,
                 home_button,
                 "返回首页",
+                primary=False
+            )
+
+            if ai_solving:
+                ai_button_text = "AI 求解中..."
+            else:
+                ai_button_text = "AI 自动求解"
+
+            draw_game_button(
+                screen,
+                ai_button,
+                ai_button_text,
+                primary=ai_solving
+            )
+
+            draw_game_button(
+                screen,
+                hint_button,
+                "AI 提示一步",
                 primary=False
             )
 
