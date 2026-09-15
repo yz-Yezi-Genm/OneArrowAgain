@@ -13,11 +13,6 @@ import sys
 import random
 import math
 
-import pygame
-import sys
-import random
-import math
-
 import os
 
 def resource_path(relative_path):
@@ -172,6 +167,15 @@ heart_empty_image = pygame.transform.scale(
     (HEART_WIDTH, HEART_HEIGHT)
 )
 
+# 开始按钮点击音效
+click_sound = pygame.mixer.Sound(
+    resource_path(
+        "assets/click.mp3"
+    )
+)
+
+click_sound.set_volume(0.3)
+
 # =====================
 # 加载音效
 # =====================
@@ -181,6 +185,37 @@ error_sound = pygame.mixer.Sound(
         "assets/error.mp3"
     )
 )
+
+# 闯关失败音效
+fail_sound = pygame.mixer.Sound(
+    resource_path(
+        "assets/厚辣干巴跌.mp3"
+    )
+)
+
+# 闯关成功音效
+levelup_sound = pygame.mixer.Sound(
+    resource_path(
+        "assets/levelup.ogg"
+    )
+)
+
+# 设置音量
+fail_sound.set_volume(0.6)
+levelup_sound.set_volume(0.6)
+
+# =====================
+# 加载背景音乐
+# =====================
+
+pygame.mixer.music.load(
+    resource_path(
+        "assets/Minecraft_background.ogg"
+    )
+)
+
+# 背景音乐音量低一些
+pygame.mixer.music.set_volume(0.6)
 
 # 设置音量
 # 0.0 = 静音
@@ -209,7 +244,7 @@ start_background = pygame.transform.smoothscale(
 
 start_button_image = pygame.image.load(
     resource_path(
-        "assets/start_button2.png"
+        "assets/start_button4.png"
     )
 ).convert_alpha()
 
@@ -222,8 +257,8 @@ start_button_image = start_button_image.subsurface(
 ).copy()
 
 # 按钮基础大小
-START_BUTTON_WIDTH = 380
-START_BUTTON_HEIGHT = 110
+START_BUTTON_WIDTH = 400
+START_BUTTON_HEIGHT = 120
 
 start_button_image = pygame.transform.smoothscale(
     start_button_image,
@@ -231,7 +266,7 @@ start_button_image = pygame.transform.smoothscale(
 )
 
 # 按钮在背景图上的原始中心位置
-START_BUTTON_CENTER = (550, 620)
+START_BUTTON_CENTER = (550, 619)
 
 # 固定的按钮区域
 start_button = start_button_image.get_rect(
@@ -245,6 +280,13 @@ start_button_float = 0.0
 small_font = pygame.font.SysFont(
     "Microsoft YaHei",
     18
+)
+
+# 版权信息字体
+copyright_font = pygame.font.SysFont(
+    "Microsoft YaHei",
+    15,
+    bold=True
 )
 
 font = pygame.font.SysFont(
@@ -644,6 +686,69 @@ def draw_hint_bar():
     screen.blit(
         hint_text,
         hint_text_rect
+    )
+
+# =====================
+# 绘制版权声明
+# =====================
+
+def draw_copyright(y):
+
+    copyright_content = (
+        "© 2026  yz-Yezi-Genm/罗宇泽. All Rights Reserved."
+    )
+
+    copyright_text = copyright_font.render(
+        copyright_content,
+        True,
+        (45, 70, 58)
+    )
+
+    copyright_rect = copyright_text.get_rect(
+        center=(
+            WIDTH // 2,
+            y
+        )
+    )
+
+    # 半透明圆角底条
+    padding_x = 14
+    padding_y = 4
+
+    bg_width = (
+        copyright_rect.width
+        + padding_x * 2
+    )
+
+    bg_height = (
+        copyright_rect.height
+        + padding_y * 2
+    )
+
+    copyright_bg = pygame.Surface(
+        (bg_width, bg_height),
+        pygame.SRCALPHA
+    )
+
+    pygame.draw.rect(
+        copyright_bg,
+        (255, 255, 245, 150),
+        copyright_bg.get_rect(),
+        border_radius=10
+    )
+
+    copyright_bg_rect = copyright_bg.get_rect(
+        center=copyright_rect.center
+    )
+
+    screen.blit(
+        copyright_bg,
+        copyright_bg_rect
+    )
+
+    screen.blit(
+        copyright_text,
+        copyright_rect
     )
 
 # =====================
@@ -1355,6 +1460,9 @@ def start_game():
 
     game_state = "PLAYING"
 
+    # 循环播放背景音乐
+    pygame.mixer.music.play(-1)
+
 def restart_game():
 
     global history
@@ -1427,7 +1535,10 @@ def go_home():
     blocked_arrow = None
     blocked_until = 0
 
+    # 返回首页后停止背景音乐
     game_state = "START"
+
+    pygame.mixer.music.stop()
 
 def next_level():
     global history
@@ -1605,6 +1716,10 @@ while running:
                             mouse_x,
                             mouse_y
                     ):
+                        # 播放开始按钮点击音效
+                        click_sound.play()
+
+                        # 进入游戏
                         start_game()
 
                     continue
@@ -1694,10 +1809,6 @@ while running:
 
                                 print("前方有箭头，被阻挡！")
 
-                                # 播放错误提示音
-                                error_sound.play()
-                                print("播放error音效")
-
                                 blocked_arrow = arrow
 
                                 blocked_until = pygame.time.get_ticks() + 350
@@ -1705,12 +1816,28 @@ while running:
                                 # 扣除一次失误机会
                                 mistakes_left -= 1
 
+                                # =====================
+                                # 生命值耗尽
+                                # =====================
+
                                 if mistakes_left <= 0:
+
                                     mistakes_left = 0
+
+                                    # 播放失败音效
+                                    fail_sound.play()
 
                                     game_state = "FAILED"
 
+                                    print("播放失败音效")
                                     print("游戏失败！")
+
+                                else:
+
+                                    # 普通失误才播放受伤音效
+                                    error_sound.play()
+
+                                    print("播放error音效")
 
                                 print("剩余失误次数：", mistakes_left)
 
@@ -1769,6 +1896,9 @@ while running:
 
             # 当前关卡已经清空
             if len(arrows) == 0:
+
+                # 播放通关音效
+                levelup_sound.play()
 
                 # 最后一关
                 if current_level == len(LEVELS) - 1:
@@ -1890,7 +2020,6 @@ while running:
             scaled_button,
             scaled_button_rect
         )
-
 
         '''
         # 调试：显示开始按钮点击区域
@@ -2441,6 +2570,15 @@ while running:
         draw_result_panel(
             game_state
         )
+
+    # =====================
+    # 版权声明
+    # 始终显示在所有界面最上层
+    # =====================
+
+    draw_copyright(
+        HEIGHT - 15
+    )
 
     # 刷新显示
     pygame.display.update()
