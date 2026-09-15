@@ -101,8 +101,6 @@ OneArrowAgain.exe
 
 ![通关界面](screenshots/3通关画面.png)
 
-> 截图文件名可根据实际保存的图片名称进行修改。
-
 ---
 
 ## 项目目录
