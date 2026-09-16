@@ -277,32 +277,36 @@ start_button = start_button_image.get_rect(
 start_button_scale = 1.0
 start_button_float = 0.0
 
-small_font = pygame.font.SysFont(
-    "Microsoft YaHei",
+FONT_PATH = resource_path(
+    "assets/font/NotoSansSC-6.ttf"
+)
+
+small_font = pygame.font.Font(
+    FONT_PATH,
     18
 )
 
-# 版权信息字体
-copyright_font = pygame.font.SysFont(
-    "Microsoft YaHei",
-    15,
-    bold=True
+copyright_font = pygame.font.Font(
+    FONT_PATH,
+    15
 )
 
-font = pygame.font.SysFont(
-    "Microsoft YaHei",
+font = pygame.font.Font(
+    FONT_PATH,
     24
 )
 
-medium_font = pygame.font.SysFont(
-    "Microsoft YaHei",
+medium_font = pygame.font.Font(
+    FONT_PATH,
     32
 )
 
-big_font = pygame.font.SysFont(
-    "Microsoft YaHei",
+big_font = pygame.font.Font(
+    FONT_PATH,
     48
 )
+
+copyright_font.set_bold(True)
 
 # =====================
 # 颜色设置
